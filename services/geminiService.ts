@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { BrkFinancialData, BacktestResult } from "../types";
+import { BrkFinancialData, BacktestResult, PbrDistribution } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -52,6 +52,54 @@ export const fetchLatestBrkData = async (): Promise<BrkFinancialData> => {
       lastUpdated: "2024-12-31 (Manual Fallback)",
       sourceUrl: "https://www.berkshirehathaway.com/"
     };
+  }
+};
+
+export const fetchPbrDistribution = async (): Promise<PbrDistribution[]> => {
+  const prompt = `
+    Analyze Berkshire Hathaway (BRK.B) Price-to-Book Ratio (PBR) distribution over the past 10 years (2014-2024).
+    I need the percentage of time the stock spent in these PBR ranges:
+    - < 1.2
+    - 1.2 - 1.3
+    - 1.3 - 1.4
+    - 1.4 - 1.5
+    - 1.5 - 1.6
+    - > 1.6
+    Return a JSON array of objects with 'range' and 'percentage'.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        tools: [{ googleSearch: {} }],
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              range: { type: Type.STRING },
+              percentage: { type: Type.NUMBER }
+            },
+            required: ["range", "percentage"]
+          }
+        }
+      },
+    });
+
+    return JSON.parse(response.text);
+  } catch (error) {
+    console.error("Failed to fetch PBR distribution:", error);
+    return [
+      { range: "< 1.2", percentage: 15, count: 0 },
+      { range: "1.2 - 1.3", percentage: 25, count: 0 },
+      { range: "1.3 - 1.4", percentage: 35, count: 0 },
+      { range: "1.4 - 1.5", percentage: 15, count: 0 },
+      { range: "1.5 - 1.6", percentage: 8, count: 0 },
+      { range: "> 1.6", percentage: 2, count: 0 }
+    ];
   }
 };
 

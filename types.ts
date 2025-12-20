@@ -7,6 +7,12 @@ export interface BrkFinancialData {
   sourceUrl?: string;
 }
 
+export interface PbrDistribution {
+  range: string;
+  percentage: number;
+  count: number;
+}
+
 export interface BacktestResult {
   labels: string[];
   holdValues: number[];

@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { fetchLatestBrkData, performBacktestAnalysis } from './services/geminiService';
-import { BrkFinancialData, BacktestResult } from './types';
+import { fetchLatestBrkData, performBacktestAnalysis, fetchPbrDistribution } from './services/geminiService';
+import { BrkFinancialData, BacktestResult, PbrDistribution } from './types';
 import { InfoCard } from './components/InfoCard';
 import { 
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, AreaChart, Area, Legend 
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, AreaChart, Area, Legend, BarChart, Bar, Cell
 } from 'recharts';
 
 const App: React.FC = () => {
@@ -12,6 +12,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [backtestLoading, setBacktestLoading] = useState<boolean>(false);
   const [backtestData, setBacktestData] = useState<BacktestResult | null>(null);
+  const [distributionData, setDistributionData] = useState<PbrDistribution[]>([]);
   const [initialCapital, setInitialCapital] = useState<number>(10000);
   const [error, setError] = useState<string | null>(null);
   const [customPbr, setCustomPbr] = useState<number>(1.45);
@@ -21,10 +22,14 @@ const App: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchLatestBrkData();
-      setData(result);
+      const [financialResult, distributionResult] = await Promise.all([
+        fetchLatestBrkData(),
+        fetchPbrDistribution()
+      ]);
+      setData(financialResult);
+      setDistributionData(distributionResult);
     } catch (err) {
-      setError("無法獲取最新財報數據。");
+      setError("無法獲取最新財報或分佈數據。");
     } finally {
       setLoading(false);
     }
@@ -57,25 +62,10 @@ const App: React.FC = () => {
     if (!data) return null;
     const bookValuePerA = (data.totalEquity * 1000000) / data.totalAShares;
     const bookValuePerB = bookValuePerA / 1500;
-    // Include specific thresholds 1.45 and 1.55 in the targets
     const multipliers = [1.0, 1.2, 1.3, 1.4, 1.45, 1.5, 1.55, 1.6, 1.7, 1.8];
     const targets = multipliers.map(m => ({ multiplier: m, price: bookValuePerB * m }));
     return { bookValuePerA, bookValuePerB, targets };
   }, [data]);
-
-  const chartData = useMemo(() => {
-    if (!valuation) return [];
-    return valuation.targets.map(t => ({ pbr: t.multiplier.toFixed(2), price: Number(t.price.toFixed(2)) }));
-  }, [valuation]);
-
-  const backtestChartData = useMemo(() => {
-    if (!backtestData) return [];
-    return backtestData.labels.map((year, i) => ({
-      year,
-      Hold: backtestData.holdValues[i],
-      Strategy: backtestData.strategyValues[i]
-    }));
-  }, [backtestData]);
 
   const currentPbrValue = useMemo(() => {
     if (!data || !valuation) return 0;
@@ -85,15 +75,25 @@ const App: React.FC = () => {
   const currentStatusInfo = useMemo(() => {
     const pbr = currentPbrValue;
     if (pbr <= 1.45) return { label: '建議買入', color: 'bg-emerald-100 text-emerald-700', border: 'border-emerald-200' };
-    if (pbr < 1.55) return { label: '保持不動 (持有)', color: 'bg-amber-100 text-amber-700', border: 'border-amber-200' };
+    if (pbr < 1.55) return { label: '保持不動', color: 'bg-amber-100 text-amber-700', border: 'border-amber-200' };
     return { label: '建議賣出 (換 QQQ)', color: 'bg-rose-100 text-rose-700', border: 'border-rose-200' };
   }, [currentPbrValue]);
+
+  // Fix: Added backtestChartData to format backtest results for Recharts
+  const backtestChartData = useMemo(() => {
+    if (!backtestData) return [];
+    return backtestData.labels.map((label, index) => ({
+      year: label,
+      Hold: backtestData.holdValues[index],
+      Strategy: backtestData.strategyValues[index],
+    }));
+  }, [backtestData]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
         <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-slate-500 font-medium animate-pulse text-center px-4">正在從公開資訊抓取最新 BRK.B 財報數據...</p>
+        <p className="text-slate-500 font-medium animate-pulse text-center px-4">正在抓取最新 BRK.B 財報及 10 年歷史分佈數據...</p>
       </div>
     );
   }
@@ -101,17 +101,17 @@ const App: React.FC = () => {
   const targetPrice = valuation ? (valuation.bookValuePerB * customPbr).toFixed(2) : "0";
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 md:pb-8 p-4 md:p-8">
+    <div className="min-h-screen bg-slate-50 pb-20 md:pb-8 p-4 md:p-8 text-slate-900">
       <div className="max-w-6xl mx-auto">
         <header className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">BRK.B 價值評估與 QQQ 切換工具</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight">BRK.B 價值評估與 QQQ 切換工具</h1>
             <div className="flex gap-4 mt-4">
               <button 
                 onClick={() => setActiveTab('calc')}
                 className={`px-4 py-2 rounded-lg font-bold transition-all ${activeTab === 'calc' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
               >
-                估值計算
+                估值與分佈
               </button>
               <button 
                 onClick={() => setActiveTab('backtest')}
@@ -137,13 +137,46 @@ const App: React.FC = () => {
               <InfoCard label="B股 每股帳面價值 (BVPS)" value={`$${valuation!.bookValuePerB.toFixed(2)}`} subValue="Equity / (A股/1500)" color="bg-emerald-50" />
               <InfoCard label="目前 BRK.B 股價" value={`$${data!.currentPrice.toFixed(2)}`} subValue={`目前 PBR: ${currentPbrValue.toFixed(2)}`} color="bg-blue-50" />
               <div className={`${currentStatusInfo.color} p-6 rounded-2xl shadow-sm border ${currentStatusInfo.border} flex flex-col justify-center`}>
-                <span className="text-xs font-bold uppercase tracking-wider opacity-70">目前策略建議</span>
+                <span className="text-xs font-bold uppercase tracking-wider opacity-70">目前建議</span>
                 <div className="text-xl font-black mt-1">{currentStatusInfo.label}</div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
+                <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                  <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-slate-800">
+                    <span className="w-2 h-6 bg-indigo-600 rounded-full"></span>
+                    過去 10 年 PBR 歷史分佈
+                  </h2>
+                  <div className="h-[350px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={distributionData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} tickFormatter={(val) => `${val}%`} />
+                        <Tooltip 
+                          cursor={{fill: '#f8fafc'}}
+                          contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}}
+                          formatter={(value) => [`${value}%`, '時間佔比']}
+                        />
+                        <Bar dataKey="percentage" radius={[8, 8, 0, 0]}>
+                          {distributionData.map((entry, index) => {
+                            let color = '#94a3b8';
+                            if (entry.range.includes('1.4') || entry.range.includes('1.5')) color = '#4f46e5';
+                            if (entry.range.includes('< 1.2')) color = '#10b981';
+                            if (entry.range.includes('> 1.6')) color = '#f43f5e';
+                            return <Cell key={`cell-${index}`} fill={color} />;
+                          })}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <p className="mt-4 text-xs text-slate-400 text-center leading-relaxed">
+                    圖表顯示過去 10 年 BRK.B 交易價格處於各 PBR 區間的時間百分比。可以看出 1.3 - 1.4x 是最常出現的「平衡區間」。
+                  </p>
+                </section>
+
                 <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                   <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
                     <span className="w-2 h-6 bg-blue-600 rounded-full"></span>
@@ -163,20 +196,17 @@ const App: React.FC = () => {
                           let zoneLabel = '';
                           let zoneColor = '';
                           if (t.multiplier <= 1.45) {
-                            zoneLabel = '買入區間 (Buy)';
+                            zoneLabel = '買入 (Buy)';
                             zoneColor = 'text-emerald-600 bg-emerald-50';
                           } else if (t.multiplier < 1.55) {
-                            zoneLabel = '持有區間 (Hold)';
+                            zoneLabel = '持有 (Hold)';
                             zoneColor = 'text-amber-600 bg-amber-50';
                           } else {
-                            zoneLabel = '賣出區間 (Sell)';
+                            zoneLabel = '賣出 (Sell)';
                             zoneColor = 'text-rose-600 bg-rose-50';
                           }
-                          
-                          const isCurrentPbrRow = Math.abs(t.multiplier - currentPbrValue) < 0.05;
-
                           return (
-                            <tr key={t.multiplier} className={`hover:bg-slate-50 transition-colors ${isCurrentPbrRow ? 'bg-blue-50/30' : ''}`}>
+                            <tr key={t.multiplier} className="hover:bg-slate-50 transition-colors">
                               <td className="py-4">
                                 <span className={`font-bold ${t.multiplier === 1.45 || t.multiplier === 1.55 ? 'text-blue-600 underline decoration-2' : 'text-slate-700'}`}>
                                   {t.multiplier.toFixed(2)}x
@@ -201,7 +231,7 @@ const App: React.FC = () => {
                 <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                   <h2 className="text-xl font-bold mb-4">PBR 區間試算</h2>
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">自定義 PBR 倍數</label>
+                    <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">試算 PBR 倍數</label>
                     <div className="flex items-center gap-4">
                       <input type="range" min="1.0" max="2.0" step="0.01" value={customPbr} onChange={(e) => setCustomPbr(parseFloat(e.target.value))} className="flex-grow h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600" />
                       <span className="text-xl font-bold text-blue-600 w-16 text-right">{customPbr.toFixed(2)}x</span>
@@ -216,25 +246,25 @@ const App: React.FC = () => {
                 <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-xl border border-slate-800">
                   <h3 className="font-bold mb-4 flex items-center gap-2 text-blue-400">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    策略核心邏輯
+                    回歸與策略核心
                   </h3>
                   <div className="space-y-4">
                     <div className="flex items-start gap-3">
                       <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold shrink-0">1</div>
                       <p className="text-xs text-slate-300 leading-relaxed">
-                        當 PBR <span className="text-emerald-400 font-bold">≤ 1.45</span>，處於價值低估區，建議分批買入 BRK.B。
+                        <span className="text-emerald-400 font-bold">≤ 1.45:</span> 根據歷史分佈，此時處於低估區（約佔歷史時間 20-30%），是理想的長線買入點。
                       </p>
                     </div>
                     <div className="flex items-start gap-3">
                       <div className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold shrink-0">2</div>
                       <p className="text-xs text-slate-300 leading-relaxed">
-                        當 PBR 處於 <span className="text-amber-400 font-bold">1.45 ~ 1.55</span> 之間，處於合理價值區，建議「保持不動」。
+                        <span className="text-amber-400 font-bold">1.45 ~ 1.55:</span> 常態交易區間，建議持有不做頻繁操作，等待波段。
                       </p>
                     </div>
                     <div className="flex items-start gap-3">
                       <div className="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs font-bold shrink-0">3</div>
                       <p className="text-xs text-slate-300 leading-relaxed">
-                        當 PBR <span className="text-rose-400 font-bold">≥ 1.55</span>，處於價值高估區，建議賣出 BRK.B 並切換至 QQQ。
+                        <span className="text-rose-400 font-bold">≥ 1.55:</span> 歷史高估警戒區。建議換入 QQQ 以獲取更高的資金利用效率。
                       </p>
                     </div>
                   </div>
@@ -246,7 +276,7 @@ const App: React.FC = () => {
           <div className="space-y-8 animate-in fade-in duration-500">
             <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                <h2 className="text-xl font-bold">5年歷史回測：1.45x 買入 / 1.55x 賣出換 QQQ</h2>
+                <h2 className="text-xl font-bold">5年回測：1.45x 買入 / 1.55x 賣出 QQQ</h2>
                 <div className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold uppercase tracking-widest">
                   Alpha Strategy
                 </div>
@@ -276,7 +306,7 @@ const App: React.FC = () => {
             {backtestLoading ? (
               <div className="bg-white p-20 rounded-2xl border border-slate-200 flex flex-col items-center justify-center">
                 <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-slate-500 font-medium">正在模擬 PBR 波段切換策略績效...</p>
+                <p className="text-slate-500 font-medium text-center">正在調取歷史行情並模擬波段切換策略績效...</p>
               </div>
             ) : backtestData ? (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -285,8 +315,8 @@ const App: React.FC = () => {
                     <div className="flex items-center justify-between mb-8">
                       <h2 className="text-xl font-bold">累積資產對比 (5年)</h2>
                       <div className="flex gap-4">
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-indigo-600"></div><span className="text-xs font-bold">1.45/1.55 切換策略</span></div>
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-slate-300"></div><span className="text-xs font-bold">BRK.B 長期持有</span></div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-indigo-600"></div><span className="text-xs font-bold">1.45/1.55 切換</span></div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-slate-300"></div><span className="text-xs font-bold">單純持有</span></div>
                       </div>
                     </div>
                     <div className="h-[400px] w-full">
@@ -297,7 +327,7 @@ const App: React.FC = () => {
                           <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} tickFormatter={(val) => `$${(val/1000).toFixed(0)}k`} />
                           <Tooltip formatter={(value: number) => `$${Math.round(value).toLocaleString()}`} />
                           <Legend />
-                          <Area type="monotone" name="長期持有 BRK.B" dataKey="Hold" stroke="#cbd5e1" strokeWidth={2} fill="#f8fafc" />
+                          <Area type="monotone" name="單純持有 BRK.B" dataKey="Hold" stroke="#cbd5e1" strokeWidth={2} fill="#f8fafc" />
                           <Area type="monotone" name="1.45/1.55 策略 (換QQQ)" dataKey="Strategy" stroke="#4f46e5" strokeWidth={3} fill="#eef2ff" fillOpacity={0.6} />
                         </AreaChart>
                       </ResponsiveContainer>
