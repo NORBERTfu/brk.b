@@ -7,20 +7,15 @@ export interface BrkFinancialData {
   sourceUrl?: string;
 }
 
-export interface HistoricalPoint {
-  year: number;
-  price: number;
-  pbr: number;
-  bvps: number;
-}
-
 export interface BacktestResult {
   labels: string[];
   holdValues: number[];
-  strategyValues: number[];
+  strategyValues: number[]; // Strategy: BRK.B < 1.5 -> QQQ > 1.6
   numTrades: number;
   holdRoi: number;
   strategyRoi: number;
+  optimalBuyPbr: number;
+  optimalSellPbr: number;
   description: string;
 }
 
