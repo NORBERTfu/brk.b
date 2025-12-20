@@ -16,9 +16,11 @@ export interface PbrDistribution {
 export interface BacktestResult {
   labels: string[];
   holdValues: number[];
-  strategyValues: number[]; // Strategy: BRK.B < 1.5 -> QQQ > 1.6
+  qqqHoldValues: number[]; // Baseline: Pure QQQ Buy & Hold
+  strategyValues: number[]; // Strategy: BRK.B < 1.45 -> QQQ > 1.55
   numTrades: number;
   holdRoi: number;
+  qqqRoi: number;
   strategyRoi: number;
   optimalBuyPbr: number;
   optimalSellPbr: number;

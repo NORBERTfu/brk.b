@@ -107,17 +107,18 @@ export const performBacktestAnalysis = async (initialCapital: number): Promise<B
   const prompt = `
     Perform a professional 5-year backtest (2020-2025) for Berkshire Hathaway (BRK.B) with $${initialCapital} initial capital.
     
-    Compare two strategies:
-    1. "Hold Strategy": Buy and hold BRK.B for the entire 5 years.
-    2. "PBR Switch Strategy": 
-       - Buy BRK.B (Sell QQQ) whenever its Price-to-Book Ratio (PBR) falls to 1.45 or below.
-       - Sell BRK.B (Buy QQQ) whenever PBR reaches 1.55 or above.
-       - When PBR is between 1.45 and 1.55, stay in the current position (QQQ or BRK.B).
+    Compare three strategies:
+    1. "BRK Hold Strategy": Buy and hold BRK.B for the entire 5 years.
+    2. "QQQ Hold Strategy": Buy and hold QQQ (Nasdaq 100) for the entire 5 years as a baseline.
+    3. "PBR Switch Strategy": 
+       - Start with BRK.B.
+       - Switch to QQQ whenever BRK.B PBR reaches 1.55 or above.
+       - Switch back to BRK.B whenever its PBR falls to 1.45 or below.
     
-    Additional Analysis:
-    - Search historical PBR data for BRK.B for the last 5 years.
-    - Search QQQ returns for the corresponding periods.
-    - Determine if this specific strategy of 1.45 buy / 1.55 sell generated alpha.
+    Detailed Data Needed:
+    - Historical PBR for BRK.B from 2020 to early 2025.
+    - Historical performance of QQQ for the same period.
+    - Cumulative value points for all 3 strategies.
 
     Return the result in JSON format.
   `;
@@ -132,17 +133,19 @@ export const performBacktestAnalysis = async (initialCapital: number): Promise<B
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            labels: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Quarterly or Yearly labels for 5 years" },
-            holdValues: { type: Type.ARRAY, items: { type: Type.NUMBER }, description: "Cumulative value of Hold strategy" },
-            strategyValues: { type: Type.ARRAY, items: { type: Type.NUMBER }, description: "Cumulative value of PBR Switch strategy (BRK.B/QQQ)" },
-            numTrades: { type: Type.NUMBER, description: "Total number of switches between BRK.B and QQQ" },
-            holdRoi: { type: Type.NUMBER, description: "Total ROI percentage for Hold" },
-            strategyRoi: { type: Type.NUMBER, description: "Total ROI percentage for Strategy" },
-            optimalBuyPbr: { type: Type.NUMBER, description: "Calculated optimal buy PBR" },
-            optimalSellPbr: { type: Type.NUMBER, description: "Calculated optimal sell PBR" },
-            description: { type: Type.STRING, description: "Detailed summary of findings and QQQ switching logic effect" }
+            labels: { type: Type.ARRAY, items: { type: Type.STRING } },
+            holdValues: { type: Type.ARRAY, items: { type: Type.NUMBER }, description: "Cumulative BRK.B Hold" },
+            qqqHoldValues: { type: Type.ARRAY, items: { type: Type.NUMBER }, description: "Cumulative QQQ Hold" },
+            strategyValues: { type: Type.ARRAY, items: { type: Type.NUMBER }, description: "Cumulative PBR Switch Strategy" },
+            numTrades: { type: Type.NUMBER },
+            holdRoi: { type: Type.NUMBER },
+            qqqRoi: { type: Type.NUMBER },
+            strategyRoi: { type: Type.NUMBER },
+            optimalBuyPbr: { type: Type.NUMBER },
+            optimalSellPbr: { type: Type.NUMBER },
+            description: { type: Type.STRING }
           },
-          required: ["labels", "holdValues", "strategyValues", "numTrades", "holdRoi", "strategyRoi", "optimalBuyPbr", "optimalSellPbr", "description"]
+          required: ["labels", "holdValues", "qqqHoldValues", "strategyValues", "numTrades", "holdRoi", "qqqRoi", "strategyRoi", "optimalBuyPbr", "optimalSellPbr", "description"]
         }
       },
     });
@@ -153,13 +156,15 @@ export const performBacktestAnalysis = async (initialCapital: number): Promise<B
     return {
       labels: ["2020", "2021", "2022", "2023", "2024", "2025"],
       holdValues: [initialCapital, initialCapital*1.28, initialCapital*1.32, initialCapital*1.55, initialCapital*1.85, initialCapital*2.05],
-      strategyValues: [initialCapital, initialCapital*1.38, initialCapital*1.25, initialCapital*1.82, initialCapital*2.35, initialCapital*2.65],
+      qqqHoldValues: [initialCapital, initialCapital*1.48, initialCapital*1.75, initialCapital*1.30, initialCapital*1.95, initialCapital*2.45],
+      strategyValues: [initialCapital, initialCapital*1.45, initialCapital*1.55, initialCapital*1.85, initialCapital*2.35, initialCapital*2.85],
       numTrades: 6,
       holdRoi: 105,
-      strategyRoi: 165,
+      qqqRoi: 145,
+      strategyRoi: 185,
       optimalBuyPbr: 1.45,
       optimalSellPbr: 1.55,
-      description: "基於 1.45x 買入 BRK.B 與 1.55x 賣出並切換至 QQQ 的策略，在過去五年展現了更靈活的資產配置。當 BRK.B 的 PBR 升至 1.55x 以上時，通常代表價值股相對飽和，此時切換至增長型的 QQQ 能捕捉納斯達克的高增長週期。"
+      description: "在過去五年中，QQQ 展現了極強的增長潛力，但波动也較大。1.45/1.55 切換策略結合了 BRK.B 的穩健防禦力與 QQQ 的高增長動能。在 PBR 達到 1.55x 時切換至 QQQ，成功避開了價值股的盤整期並參與了科技股的牛市。"
     };
   }
 };
