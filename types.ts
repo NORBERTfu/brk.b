@@ -7,6 +7,23 @@ export interface BrkFinancialData {
   sourceUrl?: string;
 }
 
+export interface HistoricalPoint {
+  year: number;
+  price: number;
+  pbr: number;
+  bvps: number;
+}
+
+export interface BacktestResult {
+  labels: string[];
+  holdValues: number[];
+  strategyValues: number[];
+  numTrades: number;
+  holdRoi: number;
+  strategyRoi: number;
+  description: string;
+}
+
 export interface CalculationResult {
   bookValuePerA: number;
   bookValuePerB: number;
@@ -14,11 +31,4 @@ export interface CalculationResult {
     multiplier: number;
     price: number;
   }[];
-}
-
-export interface AppState {
-  data: BrkFinancialData | null;
-  loading: boolean;
-  error: string | null;
-  customPbr: number;
 }
