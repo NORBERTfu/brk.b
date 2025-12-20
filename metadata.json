@@ -1,0 +1,5 @@
+{
+  "name": "Berkshire PBR Valuation Tool",
+  "description": "A professional tool to calculate Berkshire Hathaway (BRK.B) buy-in prices based on real-time Book Value and PBR multiples using Gemini Google Search grounding.",
+  "requestFramePermissions": []
+}
