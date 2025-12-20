@@ -57,14 +57,14 @@ const App: React.FC = () => {
     if (!data) return null;
     const bookValuePerA = (data.totalEquity * 1000000) / data.totalAShares;
     const bookValuePerB = bookValuePerA / 1500;
-    const multipliers = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7];
+    const multipliers = [1.0, 1.1, 1.2, 1.3, 1.4, 1.45, 1.5, 1.55, 1.6, 1.7];
     const targets = multipliers.map(m => ({ multiplier: m, price: bookValuePerB * m }));
     return { bookValuePerA, bookValuePerB, targets };
   }, [data]);
 
   const chartData = useMemo(() => {
     if (!valuation) return [];
-    return valuation.targets.map(t => ({ pbr: t.multiplier.toFixed(1), price: Number(t.price.toFixed(2)) }));
+    return valuation.targets.map(t => ({ pbr: t.multiplier.toFixed(2), price: Number(t.price.toFixed(2)) }));
   }, [valuation]);
 
   const backtestChartData = useMemo(() => {
@@ -105,7 +105,7 @@ const App: React.FC = () => {
                 onClick={() => setActiveTab('backtest')}
                 className={`px-4 py-2 rounded-lg font-bold transition-all ${activeTab === 'backtest' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
               >
-                5年回歸分析 (QQQ Switch)
+                5年回歸分析 (PBR Switch)
               </button>
             </div>
           </div>
@@ -156,12 +156,12 @@ const App: React.FC = () => {
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {valuation?.targets.map((t) => (
-                          <tr key={t.multiplier} className={`hover:bg-slate-50 ${t.multiplier === 1.2 ? 'bg-blue-50/50' : ''}`}>
-                            <td className="py-4 font-bold text-slate-700">{t.multiplier.toFixed(1)}x</td>
+                          <tr key={t.multiplier} className={`hover:bg-slate-50 ${t.multiplier === customPbr ? 'bg-blue-50/50' : ''}`}>
+                            <td className="py-4 font-bold text-slate-700">{t.multiplier.toFixed(2)}x</td>
                             <td className="py-4 font-mono font-semibold">${t.price.toFixed(2)}</td>
                             <td className="py-4 text-right">
                               <span className={`px-3 py-1 rounded-full text-xs font-bold ${t.price >= data!.currentPrice ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
-                                {t.price >= data!.currentPrice ? '合理價位' : '溢價'}
+                                {t.price >= data!.currentPrice ? '建議買入' : '目前溢價'}
                               </span>
                             </td>
                           </tr>
@@ -192,7 +192,12 @@ const App: React.FC = () => {
         ) : (
           <div className="space-y-8 animate-in fade-in duration-500">
             <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <h2 className="text-xl font-bold mb-4">回測參數設定</h2>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                <h2 className="text-xl font-bold">5年回測參數：1.45x 買入 / 1.55x 賣出 QQQ</h2>
+                <div className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold uppercase tracking-widest">
+                  Strategy: Dynamic Switch
+                </div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">初始投資金額 (USD)</label>
@@ -209,7 +214,7 @@ const App: React.FC = () => {
                     className="px-8 py-2 bg-indigo-600 text-white rounded-lg font-bold shadow-lg hover:bg-indigo-700 transition-all flex items-center gap-2"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    運行 5 年 QQQ 切換回測
+                    運行回測 (2020-2025)
                   </button>
                 </div>
               </div>
@@ -218,17 +223,17 @@ const App: React.FC = () => {
             {backtestLoading ? (
               <div className="bg-white p-20 rounded-2xl border border-slate-200 flex flex-col items-center justify-center">
                 <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-slate-500 font-medium">Gemini 正在調取 5 年歷史 PBR 與 QQQ 走勢數據...</p>
+                <p className="text-slate-500 font-medium">正在模擬 1.45x/1.55x PBR 切換策略報酬...</p>
               </div>
             ) : backtestData ? (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">
                   <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                     <div className="flex items-center justify-between mb-8">
-                      <h2 className="text-xl font-bold">策略對比：長期持有 vs PBR/QQQ 切換</h2>
+                      <h2 className="text-xl font-bold">資產增長曲線</h2>
                       <div className="flex gap-4">
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-indigo-600"></div><span className="text-xs font-bold">PBR切換策略</span></div>
-                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-slate-300"></div><span className="text-xs font-bold">單純持有</span></div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-indigo-600"></div><span className="text-xs font-bold">1.45/1.55 策略</span></div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-slate-300"></div><span className="text-xs font-bold">長期持有 BRK.B</span></div>
                       </div>
                     </div>
                     <div className="h-[400px] w-full">
@@ -239,23 +244,23 @@ const App: React.FC = () => {
                           <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} tickFormatter={(val) => `$${(val/1000).toFixed(0)}k`} />
                           <Tooltip formatter={(value: number) => `$${Math.round(value).toLocaleString()}`} />
                           <Legend />
-                          <Area type="monotone" name="長期持有 BRK.B" dataKey="Hold" stroke="#cbd5e1" strokeWidth={2} fill="#f8fafc" />
-                          <Area type="monotone" name="PBR < 1.5 (BRK.B) / > 1.6 (QQQ)" dataKey="Strategy" stroke="#4f46e5" strokeWidth={3} fill="#eef2ff" fillOpacity={0.6} />
+                          <Area type="monotone" name="單純持有 BRK.B" dataKey="Hold" stroke="#cbd5e1" strokeWidth={2} fill="#f8fafc" />
+                          <Area type="monotone" name="PBR策略 (1.45買/1.55賣換QQQ)" dataKey="Strategy" stroke="#4f46e5" strokeWidth={3} fill="#eef2ff" fillOpacity={0.6} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   </section>
                   <section className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
-                    <h3 className="font-bold text-indigo-900 mb-2">Gemini 策略透視：為何切換到 QQQ？</h3>
+                    <h3 className="font-bold text-indigo-900 mb-2">策略分析與市場洞察</h3>
                     <p className="text-indigo-800 text-sm leading-relaxed">{backtestData.description}</p>
                   </section>
                 </div>
                 <div className="space-y-6">
                   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                    <h3 className="font-bold text-slate-500 text-xs uppercase tracking-wider mb-4">5年回測數據綜述</h3>
+                    <h3 className="font-bold text-slate-500 text-xs uppercase tracking-wider mb-4">回測績效總覽</h3>
                     <div className="space-y-4">
                       <div className="flex justify-between items-center pb-4 border-b border-slate-50">
-                        <span className="text-sm text-slate-600">切換次數 (BRK.B ⇄ QQQ)</span>
+                        <span className="text-sm text-slate-600">總切換次數</span>
                         <span className="font-bold text-lg">{backtestData.numTrades} 次</span>
                       </div>
                       <div className="flex justify-between items-center pb-4 border-b border-slate-50">
@@ -271,22 +276,26 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="bg-emerald-600 p-6 rounded-2xl text-white shadow-lg">
-                    <h3 className="font-bold mb-2 flex items-center gap-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                      AI 發現的最佳 PBR 數值
+                  <div className="bg-slate-900 p-6 rounded-2xl text-white shadow-lg border border-slate-800">
+                    <h3 className="font-bold mb-2 flex items-center gap-2 text-indigo-400">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                      策略邏輯
                     </h3>
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div className="bg-white/10 p-3 rounded-xl border border-white/20">
-                        <p className="text-[10px] uppercase opacity-80">最佳買入 PBR</p>
-                        <p className="text-2xl font-black">{backtestData.optimalBuyPbr}x</p>
+                    <ul className="text-xs space-y-3 opacity-90 leading-relaxed">
+                      <li>• 當 <strong>PBR ≤ 1.45</strong>: 賣出 QQQ 全力買入 BRK.B</li>
+                      <li>• 當 <strong>PBR ≥ 1.55</strong>: 賣出 BRK.B 全力買入 QQQ</li>
+                      <li>• 旨在利用 BRK.B 的價值波動進行週期切換。</li>
+                    </ul>
+                    <div className="grid grid-cols-2 gap-4 mt-6">
+                      <div className="bg-white/5 p-3 rounded-xl border border-white/10">
+                        <p className="text-[10px] uppercase opacity-60">歷史最佳買入</p>
+                        <p className="text-xl font-black">{backtestData.optimalBuyPbr}x</p>
                       </div>
-                      <div className="bg-white/10 p-3 rounded-xl border border-white/20">
-                        <p className="text-[10px] uppercase opacity-80">最佳賣出 PBR</p>
-                        <p className="text-2xl font-black">{backtestData.optimalSellPbr}x</p>
+                      <div className="bg-white/5 p-3 rounded-xl border border-white/10">
+                        <p className="text-[10px] uppercase opacity-60">歷史最佳賣出</p>
+                        <p className="text-xl font-black">{backtestData.optimalSellPbr}x</p>
                       </div>
                     </div>
-                    <p className="mt-4 text-[11px] opacity-80 italic">註：此數值為分析過去 5 年數據後得出能產生最大超額報酬 (Alpha) 的區間。</p>
                   </div>
                 </div>
               </div>
