@@ -18,6 +18,7 @@ export interface BacktestResult {
   holdValues: number[];
   qqqHoldValues: number[]; // Baseline: Pure QQQ Buy & Hold
   strategyValues: number[]; // Strategy: BRK.B < 1.45 -> QQQ > 1.55
+  holdingTimeline: { label: string; asset: 'BRK.B' | 'QQQ' }[]; // Which asset was held at each point
   numTrades: number;
   holdRoi: number;
   qqqRoi: number;

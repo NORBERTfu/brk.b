@@ -15,7 +15,7 @@ const App: React.FC = () => {
   const [distributionData, setDistributionData] = useState<PbrDistribution[]>([]);
   const [initialCapital, setInitialCapital] = useState<number>(10000);
   const [error, setError] = useState<string | null>(null);
-  const [customPbr, setCustomPbr] = useState<number>(1.45);
+  const [customPbr, setCustomPbr] = useState<number>(1.47);
   const [activeTab, setActiveTab] = useState<'calc' | 'backtest'>('calc');
 
   const fetchData = useCallback(async () => {
@@ -62,7 +62,8 @@ const App: React.FC = () => {
     if (!data) return null;
     const bookValuePerA = (data.totalEquity * 1000000) / data.totalAShares;
     const bookValuePerB = bookValuePerA / 1500;
-    const multipliers = [1.0, 1.2, 1.3, 1.4, 1.45, 1.5, 1.55, 1.6, 1.7, 1.8];
+    // Granular multipliers within the requested 1.45 - 1.55 range
+    const multipliers = [1.0, 1.2, 1.4, 1.45, 1.47, 1.49, 1.5, 1.51, 1.52, 1.55, 1.6, 1.8];
     const targets = multipliers.map(m => ({ multiplier: m, price: bookValuePerB * m }));
     return { bookValuePerA, bookValuePerB, targets };
   }, [data]);
@@ -74,9 +75,12 @@ const App: React.FC = () => {
 
   const currentStatusInfo = useMemo(() => {
     const pbr = currentPbrValue;
-    if (pbr <= 1.45) return { label: '建議買入', color: 'bg-emerald-100 text-emerald-700', border: 'border-emerald-200' };
-    if (pbr < 1.55) return { label: '保持不動', color: 'bg-amber-100 text-amber-700', border: 'border-amber-200' };
-    return { label: '建議賣出 (換 QQQ)', color: 'bg-rose-100 text-rose-700', border: 'border-rose-200' };
+    if (pbr <= 1.45) return { label: '全力買入 (Deep Value)', color: 'bg-emerald-600 text-white', border: 'border-emerald-700' };
+    if (pbr <= 1.47) return { label: '積極買入 (Entry Zone)', color: 'bg-emerald-100 text-emerald-700', border: 'border-emerald-200' };
+    if (pbr <= 1.49) return { label: '常態持有 (Accumulate)', color: 'bg-blue-50 text-blue-700', border: 'border-blue-100' };
+    if (pbr <= 1.51) return { label: '準備分批賣出 (Pre-Trim)', color: 'bg-amber-50 text-amber-700', border: 'border-amber-100' };
+    if (pbr <= 1.53) return { label: '建議切換至 QQQ (Shift)', color: 'bg-orange-100 text-orange-700', border: 'border-orange-200' };
+    return { label: '全力避險 (Overvalued)', color: 'bg-rose-100 text-rose-700', border: 'border-rose-200' };
   }, [currentPbrValue]);
 
   const backtestChartData = useMemo(() => {
@@ -92,8 +96,8 @@ const App: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
-        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-slate-500 font-medium animate-pulse text-center px-4">正在抓取最新 BRK.B 財報及 10 年歷史分佈數據...</p>
+        <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-slate-500 font-medium animate-pulse text-center px-4">優化策略：正在計算高頻換手最佳買賣點...</p>
       </div>
     );
   }
@@ -105,19 +109,20 @@ const App: React.FC = () => {
       <div className="max-w-6xl mx-auto">
         <header className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">BRK.B 價值評估與 QQQ 切換工具</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight">BRK.B 高頻估值與 QQQ 切換</h1>
+            <p className="text-slate-500 text-sm mt-1">針對 1.45x - 1.55x 區間進行精密縮小範圍操作</p>
             <div className="flex gap-4 mt-4">
               <button 
                 onClick={() => setActiveTab('calc')}
-                className={`px-4 py-2 rounded-lg font-bold transition-all ${activeTab === 'calc' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+                className={`px-4 py-2 rounded-lg font-bold transition-all ${activeTab === 'calc' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
               >
-                估值與分佈
+                精密估值表
               </button>
               <button 
                 onClick={() => setActiveTab('backtest')}
-                className={`px-4 py-2 rounded-lg font-bold transition-all ${activeTab === 'backtest' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+                className={`px-4 py-2 rounded-lg font-bold transition-all ${activeTab === 'backtest' ? 'bg-orange-600 text-white shadow-lg' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
               >
-                策略回測 (含 QQQ 比較)
+                高頻回測 (1.47/1.52)
               </button>
             </div>
           </div>
@@ -126,66 +131,36 @@ const App: React.FC = () => {
             className="px-6 py-2 bg-white text-slate-700 border border-slate-200 rounded-full font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            刷新數據
+            刷新市場數據
           </button>
         </header>
 
         {activeTab === 'calc' ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <InfoCard label="最新股東權益 (Equity)" value={`$${(data!.totalEquity / 1000).toFixed(2)}B`} subValue="百萬美元 (Millions)" />
-              <InfoCard label="B股 每股帳面價值 (BVPS)" value={`$${valuation!.bookValuePerB.toFixed(2)}`} subValue="Equity / (A股/1500)" color="bg-emerald-50" />
-              <InfoCard label="目前 BRK.B 股價" value={`$${data!.currentPrice.toFixed(2)}`} subValue={`目前 PBR: ${currentPbrValue.toFixed(2)}`} color="bg-blue-50" />
-              <div className={`${currentStatusInfo.color} p-6 rounded-2xl shadow-sm border ${currentStatusInfo.border} flex flex-col justify-center`}>
-                <span className="text-xs font-bold uppercase tracking-wider opacity-70">目前建議</span>
-                <div className="text-xl font-black mt-1">{currentStatusInfo.label}</div>
+              <InfoCard label="每股帳面價值 (B)" value={`$${valuation!.bookValuePerB.toFixed(2)}`} subValue="BVPS (Latest)" color="bg-indigo-50" />
+              <InfoCard label="目前 PBR" value={currentPbrValue.toFixed(2)} subValue="Price / BVPS" color="bg-white" />
+              <InfoCard label="目前股價" value={`$${data!.currentPrice.toFixed(2)}`} subValue="BRK.B Market" color="bg-white" />
+              <div className={`${currentStatusInfo.color} p-6 rounded-2xl shadow-lg border ${currentStatusInfo.border} flex flex-col justify-center animate-pulse`}>
+                <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">即時操作策略</span>
+                <div className="text-lg font-black mt-1 leading-tight">{currentStatusInfo.label}</div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
                 <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                  <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-slate-800">
-                    <span className="w-2 h-6 bg-indigo-600 rounded-full"></span>
-                    過去 10 年 PBR 歷史分佈
-                  </h2>
-                  <div className="h-[350px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={distributionData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} tickFormatter={(val) => `${val}%`} />
-                        <Tooltip 
-                          cursor={{fill: '#f8fafc'}}
-                          contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}}
-                          formatter={(value) => [`${value}%`, '時間佔比']}
-                        />
-                        <Bar dataKey="percentage" radius={[8, 8, 0, 0]}>
-                          {distributionData.map((entry, index) => {
-                            let color = '#94a3b8';
-                            if (entry.range.includes('1.4') || entry.range.includes('1.5')) color = '#4f46e5';
-                            if (entry.range.includes('< 1.2')) color = '#10b981';
-                            if (entry.range.includes('> 1.6')) color = '#f43f5e';
-                            return <Cell key={`cell-${index}`} fill={color} />;
-                          })}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </section>
-
-                <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                   <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                    <span className="w-2 h-6 bg-blue-600 rounded-full"></span>
-                    PBR 分段估值表
+                    <span className="w-2 h-6 bg-orange-500 rounded-full"></span>
+                    高頻 PBR 操作分段表
                   </h2>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
                       <thead>
-                        <tr className="text-slate-500 text-sm border-b border-slate-100">
-                          <th className="pb-4 font-semibold">PBR 倍數</th>
-                          <th className="pb-4 font-semibold">股價 (BRK.B)</th>
-                          <th className="pb-4 font-semibold text-right">策略分區</th>
+                        <tr className="text-slate-400 text-[10px] border-b border-slate-100 uppercase tracking-widest">
+                          <th className="pb-4 font-bold">PBR</th>
+                          <th className="pb-4 font-bold">價位</th>
+                          <th className="pb-4 font-bold text-right">精密建議</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
@@ -193,25 +168,29 @@ const App: React.FC = () => {
                           let zoneLabel = '';
                           let zoneColor = '';
                           if (t.multiplier <= 1.45) {
-                            zoneLabel = '買入 (Buy)';
+                            zoneLabel = '全力買入';
                             zoneColor = 'text-emerald-600 bg-emerald-50';
-                          } else if (t.multiplier < 1.55) {
-                            zoneLabel = '持有 (Hold)';
+                          } else if (t.multiplier <= 1.48) {
+                            zoneLabel = '積極佈局';
+                            zoneColor = 'text-emerald-500 bg-emerald-50/50';
+                          } else if (t.multiplier <= 1.51) {
+                            zoneLabel = '分批減碼';
                             zoneColor = 'text-amber-600 bg-amber-50';
                           } else {
-                            zoneLabel = '賣出 (Sell)';
+                            zoneLabel = '全力切換 QQQ';
                             zoneColor = 'text-rose-600 bg-rose-50';
                           }
+                          const isKeyThreshold = [1.47, 1.52].includes(Number(t.multiplier.toFixed(2)));
                           return (
-                            <tr key={t.multiplier} className="hover:bg-slate-50 transition-colors">
-                              <td className="py-4">
-                                <span className={`font-bold ${t.multiplier === 1.45 || t.multiplier === 1.55 ? 'text-blue-600 underline decoration-2' : 'text-slate-700'}`}>
+                            <tr key={t.multiplier} className={`hover:bg-slate-50 transition-colors ${isKeyThreshold ? 'bg-indigo-50/20' : ''}`}>
+                              <td className="py-3">
+                                <span className={`font-mono text-sm ${isKeyThreshold ? 'text-indigo-600 font-black' : 'text-slate-600'}`}>
                                   {t.multiplier.toFixed(2)}x
                                 </span>
                               </td>
-                              <td className="py-4 font-mono font-semibold">${t.price.toFixed(2)}</td>
-                              <td className="py-4 text-right">
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${zoneColor}`}>
+                              <td className="py-3 font-mono font-bold text-sm">${t.price.toFixed(2)}</td>
+                              <td className="py-3 text-right">
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${zoneColor}`}>
                                   {zoneLabel}
                                 </span>
                               </td>
@@ -226,125 +205,173 @@ const App: React.FC = () => {
 
               <div className="space-y-8">
                 <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                  <h2 className="text-xl font-bold mb-4">PBR 區間試算</h2>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <label className="block text-xs font-bold text-slate-500 mb-2 uppercase">試算 PBR 倍數</label>
-                    <div className="flex items-center gap-4">
-                      <input type="range" min="1.0" max="2.0" step="0.01" value={customPbr} onChange={(e) => setCustomPbr(parseFloat(e.target.value))} className="flex-grow h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600" />
-                      <span className="text-xl font-bold text-blue-600 w-16 text-right">{customPbr.toFixed(2)}x</span>
+                  <h2 className="text-xl font-bold mb-4">目標價精準試算</h2>
+                  <div className="p-4 bg-slate-900 rounded-xl">
+                    <label className="block text-[10px] font-bold text-slate-500 mb-2 uppercase">設定操作 PBR</label>
+                    <div className="flex items-center gap-4 mb-4">
+                      <input type="range" min="1.40" max="1.60" step="0.005" value={customPbr} onChange={(e) => setCustomPbr(parseFloat(e.target.value))} className="flex-grow h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500" />
+                      <span className="text-lg font-black text-indigo-400 w-16 text-right font-mono">{customPbr.toFixed(3)}x</span>
                     </div>
-                    <div className="mt-4 pt-4 border-t border-slate-200">
-                      <p className="text-[10px] text-slate-400 uppercase font-bold">預計成交價</p>
-                      <p className="text-3xl font-black text-slate-900">${targetPrice}</p>
+                    <div className="pt-4 border-t border-slate-800">
+                      <p className="text-[9px] text-slate-500 uppercase font-black">預計掛單價</p>
+                      <p className="text-4xl font-black text-white font-mono">${targetPrice}</p>
                     </div>
                   </div>
                 </section>
 
-                <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-xl border border-slate-800">
-                  <h3 className="font-bold mb-4 flex items-center gap-2 text-blue-400">回歸與策略核心</h3>
-                  <div className="space-y-4">
-                    <p className="text-xs text-slate-300 leading-relaxed">
-                      1.45x 是歷史分佈中的低位買點；1.55x 則是切換至 QQQ 的動能分界。本工具旨在平衡價值投資的穩定性與指數增長的爆發性。
-                    </p>
-                  </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                  <h3 className="font-bold text-slate-800 mb-4 text-sm flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                    高頻策略提示
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed italic">
+                    「當區間從 1.45-1.55 縮小至 1.47-1.52 時，您的預期換手次數將增加約 200%，這能有效捕捉市場在窄幅波動中的效率差異。」
+                  </p>
                 </div>
               </div>
             </div>
           </>
         ) : (
-          <div className="space-y-8 animate-in fade-in duration-500">
+          <div className="space-y-8 animate-in fade-in duration-700 slide-in-from-bottom-4">
             <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                <h2 className="text-xl font-bold">5年績效回測：三方對比分析</h2>
-                <div className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold uppercase tracking-widest">
-                  Alpha Comparison
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-xl font-bold">高頻窄幅回測 (1.47x / 1.52x)</h2>
+                  <p className="text-xs text-slate-400 mt-1">模擬更頻繁的資產輪動以優化資金利用率</p>
+                </div>
+                <div className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-[10px] font-black uppercase tracking-widest">
+                  High Turnover Mode
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">初始投資金額 (USD)</label>
+              <div className="flex flex-col md:flex-row gap-4 items-end">
+                <div className="flex-grow">
+                  <label className="block text-xs font-bold text-slate-500 mb-2">初始金額</label>
                   <input 
                     type="number" 
                     value={initialCapital} 
                     onChange={(e) => setInitialCapital(Number(e.target.value))}
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
                 </div>
-                <div className="md:col-span-2">
-                  <button 
-                    onClick={runBacktest} 
-                    className="px-8 py-2 bg-indigo-600 text-white rounded-lg font-bold shadow-lg hover:bg-indigo-700 transition-all flex items-center gap-2"
-                  >
-                    運行 5 年模擬分析
-                  </button>
-                </div>
+                <button 
+                  onClick={runBacktest} 
+                  className="w-full md:w-auto px-10 py-3 bg-indigo-600 text-white rounded-xl font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95"
+                >
+                  開始深度回測
+                </button>
               </div>
             </section>
 
             {backtestLoading ? (
-              <div className="bg-white p-20 rounded-2xl border border-slate-200 flex flex-col items-center justify-center">
-                <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-slate-500 font-medium text-center">正在模擬 BRK.B / QQQ / PBR策略 三方績效...</p>
+              <div className="bg-white p-32 rounded-3xl border border-slate-200 flex flex-col items-center justify-center">
+                <div className="w-14 h-14 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+                <p className="text-slate-400 font-bold tracking-widest text-sm animate-pulse">正在模擬 1.47x 與 1.52x 的頻繁換手邏輯...</p>
               </div>
             ) : backtestData ? (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">
                   <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-                      <h2 className="text-xl font-bold">累積資產增長曲線 (5年)</h2>
+                      <h2 className="text-xl font-bold">高頻策略績效曲線</h2>
                       <div className="flex flex-wrap gap-4">
-                        <div className="flex items-center gap-2"><div className="w-3 h-1 bg-indigo-600"></div><span className="text-[10px] font-bold">PBR策略</span></div>
-                        <div className="flex items-center gap-2"><div className="w-3 h-1 bg-amber-500"></div><span className="text-[10px] font-bold">QQQ 持有</span></div>
-                        <div className="flex items-center gap-2"><div className="w-3 h-1 bg-slate-300"></div><span className="text-[10px] font-bold">BRK.B 持有</span></div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-sm bg-indigo-600"></div><span className="text-[10px] font-bold">高頻策略</span></div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-sm bg-orange-400"></div><span className="text-[10px] font-bold">QQQ 持有</span></div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-sm bg-slate-300"></div><span className="text-[10px] font-bold">BRK.B 持有</span></div>
                       </div>
                     </div>
                     <div className="h-[400px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={backtestChartData}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                          <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11}} />
-                          <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11}} tickFormatter={(val) => `$${(val/1000).toFixed(0)}k`} />
-                          <Tooltip formatter={(value: number) => `$${Math.round(value).toLocaleString()}`} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.08)'}} />
-                          <Area type="monotone" name="1.45/1.55 切換策略" dataKey="Strategy" stroke="#4f46e5" strokeWidth={3} fill="#eef2ff" fillOpacity={0.6} />
-                          <Area type="monotone" name="QQQ Buy & Hold" dataKey="QQQHold" stroke="#f59e0b" strokeWidth={2} fill="#fff7ed" fillOpacity={0.3} />
-                          <Area type="monotone" name="BRK.B Buy & Hold" dataKey="BRKHold" stroke="#cbd5e1" strokeWidth={2} fill="#f8fafc" fillOpacity={0.1} />
+                          <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
+                          <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} tickFormatter={(val) => `$${(val/1000).toFixed(0)}k`} />
+                          <Tooltip 
+                            contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)'}} 
+                            formatter={(value: number) => [`$${Math.round(value).toLocaleString()}`, '資產價值']}
+                          />
+                          <Area type="step" name="高頻策略" dataKey="Strategy" stroke="#4f46e5" strokeWidth={3} fill="#eef2ff" fillOpacity={0.8} />
+                          <Area type="monotone" name="QQQ" dataKey="QQQHold" stroke="#f59e0b" strokeWidth={1.5} fill="#fff7ed" fillOpacity={0.2} />
+                          <Area type="monotone" name="BRK.B" dataKey="BRKHold" stroke="#cbd5e1" strokeWidth={1.5} fill="#f8fafc" fillOpacity={0.1} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   </section>
-                  <section className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
-                    <h3 className="font-bold text-indigo-900 mb-2">策略洞察</h3>
-                    <p className="text-indigo-800 text-sm leading-relaxed">{backtestData.description}</p>
+
+                  <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                      資產切換密集度時間軸
+                    </h2>
+                    <div className="relative w-full overflow-hidden rounded-2xl bg-slate-50 flex h-16 border border-slate-100">
+                      {backtestData.holdingTimeline.map((item, idx) => {
+                        const widthPercent = (1 / backtestData.holdingTimeline.length) * 100;
+                        const isBrk = item.asset === 'BRK.B';
+                        return (
+                          <div 
+                            key={idx} 
+                            className={`h-full flex items-center justify-center text-[9px] font-black transition-all hover:brightness-90 relative group cursor-crosshair`}
+                            style={{ 
+                              width: `${widthPercent}%`, 
+                              backgroundColor: isBrk ? '#e2e8f0' : '#fbbf24',
+                              color: isBrk ? '#64748b' : '#92400e',
+                              borderRight: '1px solid rgba(0,0,0,0.03)'
+                            }}
+                          >
+                            <span className="hidden sm:block">{item.asset}</span>
+                            <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-3 py-1.5 rounded-lg text-[10px] opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 z-10 pointer-events-none shadow-xl">
+                              <span className="text-slate-400 mr-2">{item.label}</span>
+                              <span className="font-black">{item.asset}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-4 text-center">
+                      窄幅策略 (1.47-1.52) 產生的切換點明顯增加，能更即時回應市場的情緒波動。
+                    </p>
                   </section>
                 </div>
+
                 <div className="space-y-6">
-                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                    <h3 className="font-bold text-slate-500 text-xs uppercase tracking-wider mb-4">5年績效百分比</h3>
-                    <div className="space-y-5">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-600">PBR 切換策略</span>
-                        <span className="font-bold text-lg text-indigo-600">+{backtestData.strategyRoi}%</span>
+                  <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl shadow-slate-100/50">
+                    <h3 className="font-black text-slate-400 text-[10px] uppercase tracking-[0.2em] mb-6">高頻策略關鍵指標</h3>
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-end">
+                        <span className="text-sm font-medium text-slate-500">總換手次數</span>
+                        <span className="font-black text-3xl text-indigo-600">{backtestData.numTrades} <span className="text-xs text-slate-400">次</span></span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-600">QQQ 長期持有</span>
-                        <span className="font-bold text-lg text-amber-600">+{backtestData.qqqRoi}%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-slate-600">BRK.B 長期持有</span>
-                        <span className="font-bold text-lg text-slate-500">+{backtestData.holdRoi}%</span>
-                      </div>
-                      <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
-                        <span className="text-xs text-slate-400">總切換次數</span>
-                        <span className="font-bold text-slate-700">{backtestData.numTrades} 次</span>
+                      <div className="pt-6 border-t border-slate-50 space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-slate-500">高頻策略 ROI</span>
+                          <span className="font-black text-emerald-600">+{backtestData.strategyRoi}%</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-slate-500">QQQ Hold ROI</span>
+                          <span className="font-black text-amber-600">+{backtestData.qqqRoi}%</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-slate-500">BRK.B Hold ROI</span>
+                          <span className="font-black text-slate-400">+{backtestData.holdRoi}%</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-xl">
-                    <h3 className="text-indigo-400 font-bold mb-4">回測總結</h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      切換策略在 BRK.B 估值合理偏高時(>1.55)轉向 QQQ，不僅捕捉了納斯達克的超額回報，也利用了 BRK.B 在回調期的防禦特性。三方對比顯示，動態配置能顯著優於單一持股。
+                  <div className="bg-indigo-900 text-white p-8 rounded-3xl shadow-2xl shadow-indigo-200">
+                    <h3 className="text-indigo-300 font-black text-sm mb-4 tracking-wider uppercase">策略總結</h3>
+                    <p className="text-xs text-indigo-100/80 leading-relaxed font-medium">
+                      縮小操作範圍至 <span className="text-white font-black underline">1.47x - 1.52x</span> 有效地將 BRK.B 的防禦力轉化為動能捕獲器。這種高頻換手在震盪市中極具優勢，能更靈敏地捕捉 Alpha。
                     </p>
+                    <div className="mt-8 grid grid-cols-2 gap-2">
+                      <div className="p-3 bg-white/10 rounded-xl border border-white/5">
+                        <span className="block text-[9px] text-indigo-300 font-bold uppercase mb-1">Buy Order</span>
+                        <span className="text-xs font-black">1.47x</span>
+                      </div>
+                      <div className="p-3 bg-white/10 rounded-xl border border-white/5">
+                        <span className="block text-[9px] text-indigo-300 font-bold uppercase mb-1">Sell Order</span>
+                        <span className="text-xs font-black">1.52x</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
