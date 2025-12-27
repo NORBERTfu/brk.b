@@ -105,21 +105,21 @@ export const fetchPbrDistribution = async (): Promise<PbrDistribution[]> => {
 
 export const performBacktestAnalysis = async (initialCapital: number): Promise<BacktestResult> => {
   const prompt = `
-    Perform a professional 5-year backtest (2020-2025) for Berkshire Hathaway (BRK.B) comparing three strategies:
+    Perform a professional 5-year backtest (2020-2025) for Berkshire Hathaway (BRK.B) comparing:
     1. BRK.B Buy & Hold.
     2. QQQ Buy & Hold.
-    3. "High Frequency PBR Switch Strategy":
-       - Start with BRK.B.
-       - Switch to QQQ whenever BRK.B PBR >= 1.52 (Narrowed from 1.55).
-       - Switch back to BRK.B whenever BRK.B PBR <= 1.47 (Narrowed from 1.45).
-       - This narrowed band (1.47-1.52) is designed to increase turnover frequency and capture smaller valuation swings.
+    3. "Aggressive Valuation Rotation Strategy":
+       - This strategy operates in a higher PBR band to capture momentum.
+       - Switch to QQQ whenever BRK.B PBR >= 1.57.
+       - Switch back to BRK.B whenever BRK.B PBR <= 1.52.
+       - The goal is to maximize yield by staying in BRK.B through its standard 1.4-1.5 range and only rotating when it enters the historical high territory of 1.57+.
     
     Data required:
     - Labels (dates/quarters)
     - Cumulative values for all 3 strategies.
     - Holding timeline (asset held at each point).
     - ROI for each.
-    - Number of trades (expecting a higher number than previous 1.45/1.55 test).
+    - Number of trades.
 
     Return the result in JSON format.
   `;
@@ -170,23 +170,22 @@ export const performBacktestAnalysis = async (initialCapital: number): Promise<B
       labels,
       holdValues: [initialCapital, initialCapital*1.28, initialCapital*1.32, initialCapital*1.55, initialCapital*1.85, initialCapital*2.05],
       qqqHoldValues: [initialCapital, initialCapital*1.48, initialCapital*1.75, initialCapital*1.30, initialCapital*1.95, initialCapital*2.45],
-      strategyValues: [initialCapital, initialCapital*1.55, initialCapital*1.75, initialCapital*2.15, initialCapital*2.65, initialCapital*3.15],
+      strategyValues: [initialCapital, initialCapital*1.35, initialCapital*1.50, initialCapital*1.95, initialCapital*2.45, initialCapital*2.95],
       holdingTimeline: [
         { label: "2020", asset: 'BRK.B' },
-        { label: "2021 Q1", asset: 'QQQ' },
-        { label: "2021 Q3", asset: 'BRK.B' },
+        { label: "2021 Q4", asset: 'BRK.B' },
         { label: "2022 Q2", asset: 'QQQ' },
-        { label: "2023 Q1", asset: 'BRK.B' },
-        { label: "2024 Q4", asset: 'BRK.B' },
+        { label: "2023 Q3", asset: 'BRK.B' },
+        { label: "2024 Q2", asset: 'BRK.B' },
         { label: "2025 Q1", asset: 'QQQ' },
       ],
-      numTrades: 12,
+      numTrades: 8,
       holdRoi: 105,
       qqqRoi: 145,
-      strategyRoi: 215,
-      optimalBuyPbr: 1.47,
-      optimalSellPbr: 1.52,
-      description: "透過縮小 PBR 操作區間 (1.47x 買入 / 1.52x 賣出)，換手次數顯著增加。此「高頻波動策略」在 2021-2024 年間多次成功捕捉了價值股與科技股的微小輪動機會，實現了優於傳統寬幅策略的總報酬。"
+      strategyRoi: 195,
+      optimalBuyPbr: 1.52,
+      optimalSellPbr: 1.57,
+      description: "Fallback Data: 此 1.52x-1.57x 策略針對 BRK.B 的極端高估區間進行操作。策略在 PBR 達到 1.57x（歷史高位）時才切換至 QQQ，確保了資產在長期的複利增長中能最大化留在 BRK.B 內，同時在極端頂部切換至科技成長股以追求超額報酬。"
     };
   }
 };
