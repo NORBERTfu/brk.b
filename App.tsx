@@ -109,11 +109,11 @@ const App: React.FC = () => {
         <header className="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 bg-rose-600 text-white text-[10px] font-black rounded uppercase tracking-tighter">Premium Tool</span>
-              <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">v2.1 Rotation Logic</span>
+              <span className="px-2 py-0.5 bg-rose-600 text-white text-[10px] font-black rounded uppercase tracking-tighter">AI Optimized</span>
+              <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Parameter Discovery v3.0</span>
             </div>
-            <h1 className="text-4xl font-black tracking-tighter text-slate-900 leading-none">BRK.B 1.52/1.57 <span className="text-rose-600">Rotation</span></h1>
-            <p className="text-slate-500 text-sm mt-3 font-medium max-w-md leading-relaxed">專為波段交易者設計的高階回測工具，精確鎖定伯克希爾 1.52x 與 1.57x PBR 關鍵輪動區間。</p>
+            <h1 className="text-4xl font-black tracking-tighter text-slate-900 leading-none">BRK.B <span className="text-rose-600">Golden</span> Ratios</h1>
+            <p className="text-slate-500 text-sm mt-3 font-medium max-w-md leading-relaxed">運用 Gemini 算力搜尋歷史數據中的最佳 PBR 買賣點，實現超額報酬最大化。</p>
           </div>
           <div className="flex gap-2">
             <button 
@@ -165,6 +165,8 @@ const App: React.FC = () => {
                       <tbody className="divide-y divide-slate-50">
                         {valuation?.targets.map((t) => {
                           const isKey = [1.52, 1.57].includes(Number(t.multiplier.toFixed(2)));
+                          const isAIRecommended = backtestData && (Math.abs(t.multiplier - backtestData.optimalBuyPbr) < 0.01 || Math.abs(t.multiplier - backtestData.optimalSellPbr) < 0.01);
+                          
                           let zoneLabel = '';
                           let zoneColor = '';
                           if (t.multiplier <= 1.45) { zoneLabel = '價值區'; zoneColor = 'text-emerald-600 bg-emerald-50'; }
@@ -173,10 +175,11 @@ const App: React.FC = () => {
                           else { zoneLabel = '輪動區'; zoneColor = 'text-rose-600 bg-rose-50'; }
 
                           return (
-                            <tr key={t.multiplier} className={`hover:bg-slate-50/80 transition-all ${isKey ? 'bg-rose-50/40' : ''}`}>
+                            <tr key={t.multiplier} className={`hover:bg-slate-50/80 transition-all ${isKey ? 'bg-rose-50/40' : ''} ${isAIRecommended ? 'ring-2 ring-amber-400 ring-inset' : ''}`}>
                               <td className="py-4">
                                 <span className={`font-mono text-sm ${isKey ? 'text-rose-600 font-black scale-110 inline-block' : 'text-slate-600 font-medium'}`}>
                                   {t.multiplier.toFixed(2)}x
+                                  {isAIRecommended && <span className="ml-2 text-[8px] bg-amber-400 text-white px-1 rounded uppercase">AI Best</span>}
                                 </span>
                               </td>
                               <td className="py-4 font-mono font-black text-slate-900">${t.price.toFixed(2)}</td>
@@ -236,9 +239,6 @@ const App: React.FC = () => {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-                  <p className="mt-4 text-[10px] text-slate-400 font-medium leading-relaxed">
-                    註：紅色區塊表示 BRK.B 處於歷史相對高位或策略輪動區間（PBR > 1.5x）。
-                  </p>
                 </section>
               </div>
 
@@ -262,15 +262,30 @@ const App: React.FC = () => {
                   </div>
                 </section>
 
-                <div className="bg-white p-6 rounded-2xl border border-slate-200">
-                  <h3 className="font-black text-slate-900 mb-3 text-xs uppercase flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-rose-600"></div>
-                    1.52 / 1.57 切換邏輯
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                    歷史數據顯示，當 BRK.B PBR 超過 1.57x 時，上行空間相對有限，此時切換至高 Beta 的 QQQ 能捕捉指數動能。回落至 1.52x 時則觸發價值回歸買入信號。
-                  </p>
-                </div>
+                {backtestData && (
+                  <div className="bg-amber-50 p-6 rounded-2xl border border-amber-200">
+                    <h3 className="font-black text-amber-900 mb-3 text-xs uppercase flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                      AI 推薦最佳參數
+                    </h3>
+                    <div className="flex justify-between mb-4">
+                      <div>
+                        <span className="block text-[8px] font-black text-amber-600 uppercase">最佳買入</span>
+                        <span className="text-xl font-black text-slate-900">{backtestData.optimalBuyPbr}x</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="block text-[8px] font-black text-amber-600 uppercase">最佳賣出</span>
+                        <span className="text-xl font-black text-slate-900">{backtestData.optimalSellPbr}x</span>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setCustomPbr(backtestData.optimalBuyPbr)}
+                      className="w-full py-2 bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-amber-600 transition-colors"
+                    >
+                      套用買入參考點
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -279,11 +294,10 @@ const App: React.FC = () => {
             <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-8 mb-12">
                 <div className="flex-1">
-                  <h2 className="text-2xl font-black tracking-tighter mb-2">深度績效回測 <span className="text-rose-600">(1.52 / 1.57)</span></h2>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Backtesting Period: 2020 - 2025</p>
+                  <h2 className="text-2xl font-black tracking-tighter mb-2">深度績效回測 <span className="text-rose-600">參數優化</span></h2>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Period: 2020-2025 | AI Strategy Discovery</p>
                 </div>
 
-                {/* Enhanced Capital Input Section */}
                 <div className="flex-1 max-w-md bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-inner">
                   <div className="flex items-center justify-between mb-4">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">初始投資資金 (USD)</label>
@@ -291,7 +305,6 @@ const App: React.FC = () => {
                   </div>
                   
                   <div className="space-y-6">
-                    {/* Quick Presets */}
                     <div className="flex gap-2">
                       {[10000, 50000, 100000].map((val) => (
                         <button
@@ -308,7 +321,6 @@ const App: React.FC = () => {
                       ))}
                     </div>
 
-                    {/* Numeric Input & Slider */}
                     <div className="space-y-4">
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">$</span>
@@ -338,7 +350,7 @@ const App: React.FC = () => {
                       {backtestLoading ? (
                         <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
                       ) : null}
-                      {backtestLoading ? '計算中...' : '重新執行模擬分析'}
+                      {backtestLoading ? '參數搜尋中...' : '執行 AI 優化模擬'}
                     </button>
                   </div>
                 </div>
@@ -346,18 +358,17 @@ const App: React.FC = () => {
 
               {backtestLoading ? (
                 <div className="p-32 flex flex-col items-center justify-center bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200">
-                  <div className="w-12 h-12 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mb-6"></div>
-                  <p className="text-slate-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">Running High-Band Simulations...</p>
+                  <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+                  <p className="text-slate-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">Analyzing Historical Volatility Patterns...</p>
                 </div>
               ) : backtestData ? (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                   <div className="lg:col-span-2 space-y-8">
                     <div className="bg-white p-4 rounded-3xl">
                       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">累積資產對比</h3>
+                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">優化策略績效圖</h3>
                         <div className="flex flex-wrap gap-4">
-                          <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-rose-600"></div><span className="text-[10px] font-black text-slate-500">1.52/1.57 策略</span></div>
-                          <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-amber-400"></div><span className="text-[10px] font-black text-slate-500">QQQ Hold</span></div>
+                          <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div><span className="text-[10px] font-black text-slate-500">AI 優化策略 ({backtestData.optimalBuyPbr}/{backtestData.optimalSellPbr})</span></div>
                           <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-slate-300"></div><span className="text-[10px] font-black text-slate-500">BRK.B Hold</span></div>
                         </div>
                       </div>
@@ -371,39 +382,32 @@ const App: React.FC = () => {
                               contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.1)', padding: '16px'}} 
                               formatter={(value: number) => [`$${Math.round(value).toLocaleString()}`, 'Value']}
                             />
-                            <Area type="step" name="Strategy" dataKey="Strategy" stroke="#e11d48" strokeWidth={4} fill="#fff1f2" fillOpacity={0.8} />
-                            <Area type="monotone" name="QQQ" dataKey="QQQHold" stroke="#f59e0b" strokeWidth={2} fill="#fff7ed" fillOpacity={0.2} />
+                            <Area type="step" name="Strategy" dataKey="Strategy" stroke="#f59e0b" strokeWidth={4} fill="#fffbeb" fillOpacity={0.8} />
                             <Area type="monotone" name="BRK.B" dataKey="BRKHold" stroke="#cbd5e1" strokeWidth={2} fill="#f8fafc" fillOpacity={0.1} />
                           </AreaChart>
                         </ResponsiveContainer>
                       </div>
                     </div>
 
-                    <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100">
-                      <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6">資產配置時間軸</h3>
-                      <div className="relative w-full overflow-hidden rounded-2xl bg-white flex h-20 shadow-inner border border-slate-200">
-                        {backtestData.holdingTimeline.map((item, idx) => {
-                          const widthPercent = (1 / backtestData.holdingTimeline.length) * 100;
-                          const isBrk = item.asset === 'BRK.B';
-                          return (
-                            <div 
-                              key={idx} 
-                              className={`h-full flex flex-col items-center justify-center transition-all hover:brightness-95 relative group cursor-pointer`}
-                              style={{ 
-                                width: `${widthPercent}%`, 
-                                backgroundColor: isBrk ? '#f8fafc' : '#fffbeb',
-                                borderRight: '1px solid rgba(0,0,0,0.05)'
-                              }}
-                            >
-                              <div className={`w-2 h-2 rounded-full mb-1 ${isBrk ? 'bg-slate-300' : 'bg-amber-400'}`}></div>
-                              <span className={`text-[8px] font-black uppercase ${isBrk ? 'text-slate-400' : 'text-amber-600'}`}>{item.asset}</span>
-                              <div className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-3 py-2 rounded-xl text-[10px] font-black opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 z-10 pointer-events-none shadow-2xl whitespace-nowrap">
-                                <span className="text-rose-400 mr-2">{item.label}</span>
-                                <span>{item.asset}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
+                    <div className="bg-slate-900 p-8 rounded-3xl border border-slate-800 text-white">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center font-black text-slate-900">!</div>
+                        <h3 className="text-lg font-black tracking-tight">AI 深度策略解析</h3>
+                      </div>
+                      <p className="text-sm font-medium leading-relaxed opacity-80 mb-8">
+                        {backtestData.description}
+                      </p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">最佳買入閾值</span>
+                          <div className="text-3xl font-black text-amber-500">{backtestData.optimalBuyPbr}x</div>
+                          <p className="text-[9px] text-slate-400 mt-2 italic">高勝率底部支撐區</p>
+                        </div>
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">最佳賣出閾值</span>
+                          <div className="text-3xl font-black text-rose-500">{backtestData.optimalSellPbr}x</div>
+                          <p className="text-[9px] text-slate-400 mt-2 italic">歷史阻力動能區</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -413,13 +417,14 @@ const App: React.FC = () => {
                       <h3 className="font-black text-slate-400 text-[10px] uppercase tracking-[0.3em] mb-8">Performance Summary</h3>
                       <div className="space-y-8">
                         <div>
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">策略總報酬 (ROI)</span>
-                          <div className="text-4xl font-black text-emerald-600">+{backtestData.strategyRoi}%</div>
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">優化策略總報酬 (ROI)</span>
+                          <div className="text-4xl font-black text-amber-600">+{backtestData.strategyRoi}%</div>
+                          <span className="text-[9px] font-bold text-emerald-600 mt-1 block">▲ 比基準高出 {backtestData.strategyRoi - backtestData.holdRoi}%</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                           <div className="p-4 bg-slate-50 rounded-2xl">
                             <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">QQQ Hold</span>
-                            <div className="text-lg font-black text-amber-600">+{backtestData.qqqRoi}%</div>
+                            <div className="text-lg font-black text-slate-700">+{backtestData.qqqRoi}%</div>
                           </div>
                           <div className="p-4 bg-slate-50 rounded-2xl">
                             <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">BRK.B Hold</span>
@@ -427,27 +432,21 @@ const App: React.FC = () => {
                           </div>
                         </div>
                         <div className="pt-6 border-t border-slate-100 flex justify-between items-center">
-                          <span className="text-xs font-bold text-slate-400 uppercase">總操作次數</span>
+                          <span className="text-xs font-bold text-slate-400 uppercase">交易輪動次數</span>
                           <span className="text-xl font-black text-slate-900">{backtestData.numTrades} 次</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-rose-600 text-white p-8 rounded-3xl shadow-2xl shadow-rose-200">
-                      <h3 className="text-rose-200 font-black text-xs uppercase tracking-widest mb-4">1.52 / 1.57 深度洞察</h3>
-                      <p className="text-sm font-medium leading-relaxed opacity-90">
-                        {backtestData.description}
+                    <div className="bg-amber-500 text-slate-900 p-8 rounded-3xl shadow-2xl shadow-amber-200">
+                      <h3 className="font-black text-xs uppercase tracking-widest mb-4">如何使用最佳比例？</h3>
+                      <p className="text-sm font-bold leading-relaxed">
+                        當前系統掃描出的 {backtestData.optimalBuyPbr}x 是過去 5 年內最能在「價值回歸」與「保留現金」之間取得平衡的點位。
                       </p>
-                      <div className="mt-8 flex items-center justify-between p-4 bg-white/10 rounded-2xl border border-white/10">
-                        <div>
-                          <span className="block text-[9px] font-black text-rose-200 uppercase tracking-widest mb-1">Entry Trigger</span>
-                          <span className="text-lg font-black font-mono">1.52x</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="block text-[9px] font-black text-rose-200 uppercase tracking-widest mb-1">Exit Trigger</span>
-                          <span className="text-lg font-black font-mono">1.57x</span>
-                        </div>
-                      </div>
+                      <ul className="mt-4 space-y-2">
+                        <li className="flex gap-2 text-[11px] font-bold items-start"><span className="opacity-40">01</span> 若 PBR 低於此值，建議 100% 配置 BRK.B。</li>
+                        <li className="flex gap-2 text-[11px] font-bold items-start"><span className="opacity-40">02</span> 若 PBR 高於 {backtestData.optimalSellPbr}x，歷史顯示波段收益已飽和。</li>
+                      </ul>
                     </div>
                   </div>
                 </div>
