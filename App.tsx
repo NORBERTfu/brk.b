@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { fetchLatestBrkData, performBacktestAnalysis, fetchPbrDistribution } from './services/geminiService';
 import { BrkFinancialData, BacktestResult, PbrDistribution } from './types';
@@ -193,6 +192,54 @@ const App: React.FC = () => {
                     </table>
                   </div>
                 </section>
+
+                <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                  <div className="flex items-center justify-between mb-8">
+                    <h2 className="text-xl font-black tracking-tight flex items-center gap-2">
+                      <div className="w-1.5 h-6 bg-rose-600 rounded-full"></div>
+                      歷史 PBR 分佈 (10年)
+                    </h2>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Historical Statistics</span>
+                  </div>
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={distributionData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis 
+                          dataKey="range" 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 'bold'}} 
+                        />
+                        <YAxis 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 'bold'}} 
+                          tickFormatter={(val) => `${val}%`} 
+                        />
+                        <Tooltip 
+                          cursor={{fill: '#f8fafc'}}
+                          contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', padding: '12px'}} 
+                          formatter={(value: number) => [`${value}%`, '時間佔比']}
+                        />
+                        <Bar dataKey="percentage" radius={[6, 6, 0, 0]}>
+                          {distributionData.map((entry, index) => {
+                            const isHigh = entry.range.includes('1.5') || entry.range.includes('1.6') || entry.range.includes('>');
+                            return (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={isHigh ? '#e11d48' : '#cbd5e1'} 
+                              />
+                            );
+                          })}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <p className="mt-4 text-[10px] text-slate-400 font-medium leading-relaxed">
+                    註：紅色區塊表示 BRK.B 處於歷史相對高位或策略輪動區間（PBR > 1.5x）。
+                  </p>
+                </section>
               </div>
 
               <div className="space-y-6">
@@ -230,27 +277,70 @@ const App: React.FC = () => {
         ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                <div>
-                  <h2 className="text-2xl font-black tracking-tighter">深度績效回測 <span className="text-rose-600">(1.52 / 1.57)</span></h2>
-                  <p className="text-xs text-slate-400 mt-1 font-bold uppercase tracking-widest">Backtesting Period: 2020 - 2025</p>
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-8 mb-12">
+                <div className="flex-1">
+                  <h2 className="text-2xl font-black tracking-tighter mb-2">深度績效回測 <span className="text-rose-600">(1.52 / 1.57)</span></h2>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Backtesting Period: 2020 - 2025</p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <label className="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">初始資金 (USD)</label>
-                    <input 
-                      type="number" 
-                      value={initialCapital} 
-                      onChange={(e) => setInitialCapital(Number(e.target.value))}
-                      className="text-xl font-black text-slate-900 bg-transparent border-b-2 border-rose-600 outline-none w-32 text-right"
-                    />
+
+                {/* Enhanced Capital Input Section */}
+                <div className="flex-1 max-w-md bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-inner">
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">初始投資資金 (USD)</label>
+                    <span className="text-xs font-mono font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded">${initialCapital.toLocaleString()}</span>
                   </div>
-                  <button 
-                    onClick={runBacktest} 
-                    className="px-8 py-3 bg-rose-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all"
-                  >
-                    重新模擬
-                  </button>
+                  
+                  <div className="space-y-6">
+                    {/* Quick Presets */}
+                    <div className="flex gap-2">
+                      {[10000, 50000, 100000].map((val) => (
+                        <button
+                          key={val}
+                          onClick={() => setInitialCapital(val)}
+                          className={`flex-1 py-1.5 rounded-lg text-[10px] font-black transition-all border ${
+                            initialCapital === val 
+                            ? 'bg-rose-600 text-white border-rose-600 shadow-lg shadow-rose-100' 
+                            : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          ${(val/1000)}k
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Numeric Input & Slider */}
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">$</span>
+                        <input 
+                          type="number" 
+                          value={initialCapital} 
+                          onChange={(e) => setInitialCapital(Number(e.target.value))}
+                          className="w-full pl-8 pr-4 py-3 text-xl font-black text-slate-900 bg-white border-2 border-slate-200 rounded-xl focus:border-rose-500 focus:outline-none transition-all"
+                        />
+                      </div>
+                      <input 
+                        type="range" 
+                        min="1000" 
+                        max="500000" 
+                        step="1000" 
+                        value={initialCapital} 
+                        onChange={(e) => setInitialCapital(Number(e.target.value))} 
+                        className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-rose-600" 
+                      />
+                    </div>
+
+                    <button 
+                      onClick={runBacktest} 
+                      disabled={backtestLoading}
+                      className="w-full py-4 bg-slate-900 text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {backtestLoading ? (
+                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                      ) : null}
+                      {backtestLoading ? '計算中...' : '重新執行模擬分析'}
+                    </button>
+                  </div>
                 </div>
               </div>
 
