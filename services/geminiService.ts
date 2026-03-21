@@ -1,7 +1,7 @@
 import { BrkFinancialData, BacktestResult, PbrDistribution } from "../types";
 
 // 呼叫 Cloudflare proxy Worker，由它轉發到 Anthropic API
-const PROXY_URL = "https://claude-proxy.norbert-fu.workers.dev";
+const PROXY_URL = "https://spring-dust-32c3claude-proxy.norbert-fu.workers.dev";
 
 async function callClaude(prompt: string): Promise<string> {
   const response = await fetch(PROXY_URL, {
