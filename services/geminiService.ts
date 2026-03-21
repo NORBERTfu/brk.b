@@ -1,26 +1,20 @@
 import { BrkFinancialData, BacktestResult, PbrDistribution } from "../types";
 
-const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-sonnet-4-20250514";
+// 呼叫 Cloudflare proxy Worker，由它轉發到 Anthropic API
+const PROXY_URL = "https://claude-proxy.norbert-fu.workers.dev";
 
 async function callClaude(prompt: string): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
-  const response = await fetch(ANTHROPIC_API_URL, {
+  const response = await fetch(PROXY_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: MODEL,
+      model: "claude-sonnet-4-20250514",
       max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
       system: "You are a financial data assistant. Always respond with valid JSON only, no explanation, no markdown fences, no extra text.",
     }),
   });
-  if (!response.ok) throw new Error("Claude API error: " + response.status);
+  if (!response.ok) throw new Error("Proxy error: " + response.status);
   const data = await response.json();
   return (data.content?.[0]?.text ?? "").replace(/```json|```/g, "").trim();
 }
@@ -77,9 +71,9 @@ export const performBacktestAnalysis = async (initialCapital: number): Promise<B
     const labels = ["2020", "2021", "2022", "2023", "2024", "2025"];
     return {
       labels,
-      holdValues: [initialCapital, initialCapital * 1.28, initialCapital * 1.32, initialCapital * 1.55, initialCapital * 1.85, initialCapital * 2.05],
-      qqqHoldValues: [initialCapital, initialCapital * 1.48, initialCapital * 1.75, initialCapital * 1.3, initialCapital * 1.95, initialCapital * 2.45],
-      strategyValues: [initialCapital, initialCapital * 1.4, initialCapital * 1.65, initialCapital * 2.1, initialCapital * 2.7, initialCapital * 3.15],
+      holdValues: [initialCapital, initialCapital*1.28, initialCapital*1.32, initialCapital*1.55, initialCapital*1.85, initialCapital*2.05],
+      qqqHoldValues: [initialCapital, initialCapital*1.48, initialCapital*1.75, initialCapital*1.3, initialCapital*1.95, initialCapital*2.45],
+      strategyValues: [initialCapital, initialCapital*1.4, initialCapital*1.65, initialCapital*2.1, initialCapital*2.7, initialCapital*3.15],
       holdingTimeline: [
         { label: "2020", asset: "BRK.B" }, { label: "2021 Q4", asset: "BRK.B" },
         { label: "2022 Q2", asset: "QQQ" }, { label: "2023 Q3", asset: "BRK.B" },
