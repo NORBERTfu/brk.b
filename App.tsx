@@ -16,6 +16,9 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [customPbr, setCustomPbr] = useState<number>(1.52);
   const [activeTab, setActiveTab] = useState<'calc' | 'backtest'>('calc');
+  const [showUpdateModal, setShowUpdateModal] = useState<boolean>(false);
+  const [updateForm, setUpdateForm] = useState({ totalEquity: '717419', totalAShares: '1438223', currentPrice: '470', lastUpdated: '' });
+  const [copied, setCopied] = useState<boolean>(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -120,7 +123,7 @@ const App: React.FC = () => {
             <h1 className="text-4xl font-black tracking-tighter text-slate-900 leading-none">BRK.B <span className="text-rose-600">AI</span> Strategy</h1>
             <p className="text-slate-500 text-sm mt-3 font-medium max-w-md leading-relaxed">自動搜尋並視覺化伯克希爾最佳 PBR 輪動點位，以歷史波動率導向的精密估值工具。</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
             <button 
               onClick={() => setActiveTab('calc')}
               className={`px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'calc' ? 'bg-slate-900 text-white shadow-xl' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
@@ -132,6 +135,13 @@ const App: React.FC = () => {
               className={`px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'backtest' ? 'bg-rose-600 text-white shadow-xl shadow-rose-200' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
             >
               策略回測
+            </button>
+            <button
+              onClick={() => { setUpdateForm({ totalEquity: String(data?.totalEquity ?? ''), totalAShares: String(data?.totalAShares ?? ''), currentPrice: String(data?.currentPrice ?? ''), lastUpdated: '' }); setShowUpdateModal(true); setCopied(false); }}
+              className="px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all bg-amber-500 text-slate-900 hover:bg-amber-400 shadow-lg shadow-amber-200 flex items-center gap-1.5"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              更新季報
             </button>
           </div>
         </header>
@@ -493,6 +503,108 @@ const App: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* ── 更新季報 Modal ── */}
+      {showUpdateModal && (() => {
+        const eq = parseFloat(updateForm.totalEquity) || 0;
+        const sh = parseFloat(updateForm.totalAShares) || 1;
+        const px = parseFloat(updateForm.currentPrice) || 0;
+        const bvpsB = (eq * 1_000_000) / sh / 1500;
+        const pbr = bvpsB > 0 ? (px / bvpsB).toFixed(3) : '-';
+        const quarter = updateForm.lastUpdated || '____Q?';
+        const snippet =
+`// ============================================================
+// 📌 每季手動更新此區塊 — 最後更新：${quarter}
+// ============================================================
+const MANUAL_DATA = {
+  totalEquity: ${updateForm.totalEquity},
+  totalAShares: ${updateForm.totalAShares},
+  currentPrice: ${updateForm.currentPrice},
+  lastUpdated: "${quarter}",
+  sourceUrl: "https://www.berkshirehathaway.com/",
+};`;
+        return (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+              {/* header */}
+              <div className="bg-slate-900 px-8 py-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-white font-black text-lg tracking-tight">📋 更新季報數據</h2>
+                  <p className="text-slate-400 text-xs mt-0.5">填入最新財報數字，複製程式碼貼到 GitHub</p>
+                </div>
+                <button onClick={() => setShowUpdateModal(false)} className="text-slate-500 hover:text-white transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+              </div>
+
+              {/* form */}
+              <div className="px-8 py-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">股東權益（百萬美元）</label>
+                    <input type="number" value={updateForm.totalEquity}
+                      onChange={e => setUpdateForm(f => ({ ...f, totalEquity: e.target.value }))}
+                      className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl font-mono text-sm focus:border-amber-400 focus:outline-none" placeholder="717419" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">A股等值股數</label>
+                    <input type="number" value={updateForm.totalAShares}
+                      onChange={e => setUpdateForm(f => ({ ...f, totalAShares: e.target.value }))}
+                      className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl font-mono text-sm focus:border-amber-400 focus:outline-none" placeholder="1438223" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">BRK.B 現在市價（$）</label>
+                    <input type="number" value={updateForm.currentPrice}
+                      onChange={e => setUpdateForm(f => ({ ...f, currentPrice: e.target.value }))}
+                      className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl font-mono text-sm focus:border-amber-400 focus:outline-none" placeholder="470" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">季報期別</label>
+                    <input type="text" value={updateForm.lastUpdated}
+                      onChange={e => setUpdateForm(f => ({ ...f, lastUpdated: e.target.value }))}
+                      className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl font-mono text-sm focus:border-amber-400 focus:outline-none" placeholder="2026Q1（2026/05）" />
+                  </div>
+                </div>
+
+                {/* 即時計算預覽 */}
+                <div className="bg-slate-50 rounded-2xl p-4 flex gap-6">
+                  <div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase block">B股帳面淨值</span>
+                    <span className="text-2xl font-black text-slate-900">${bvpsB > 0 ? bvpsB.toFixed(2) : '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase block">當前 PBR</span>
+                    <span className="text-2xl font-black text-amber-600">{pbr}x</span>
+                  </div>
+                </div>
+
+                {/* 程式碼片段 */}
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">複製此段程式碼 → 貼到 GitHub services/geminiService.ts 最上方</label>
+                  <pre className="bg-slate-900 text-green-400 text-[11px] rounded-xl p-4 overflow-auto max-h-40 font-mono leading-relaxed">{snippet}</pre>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(snippet); setCopied(true); setTimeout(() => setCopied(false), 3000); }}
+                    className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${copied ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-slate-900 hover:bg-amber-400'}`}
+                  >
+                    {copied ? '✓ 已複製！' : '📋 複製程式碼'}
+                  </button>
+                  <a
+                    href="https://github.com/NORBERTfu/brk.b/edit/main/services/geminiService.ts"
+                    target="_blank" rel="noreferrer"
+                    className="flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest bg-slate-900 text-white hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"></path></svg>
+                    開啟 GitHub
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
