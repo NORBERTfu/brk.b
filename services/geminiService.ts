@@ -7,12 +7,10 @@ import { BrkFinancialData, BacktestResult, PbrDistribution } from "../types";
 const MANUAL_DATA = {
   totalEquity: 727181,
   totalAShares: 1437903,
-  currentPrice: 498,
-  lastUpdated: "____Q?",
+  currentPrice: 488,
+  lastUpdated: "2026Q1",
   sourceUrl: "https://www.berkshirehathaway.com/",
 };
-};
-// ============================================================
 
 // B股帳面淨值 = (股東權益 × 1,000,000) ÷ A股數 ÷ 1,500
 // 2025Q4: (717,419 × 1,000,000) ÷ 1,438,223 ÷ 1,500 = $332.5
