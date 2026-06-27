@@ -1,18 +1,16 @@
 import { BrkFinancialData, BacktestResult, PbrDistribution } from "../types";
 
+
 // ============================================================
-// 📌 每季手動更新此區塊 — 最後更新：2025Q4
+// 📌 每季手動更新此區塊 — 最後更新：2026Q1
 // ============================================================
 const MANUAL_DATA = {
-  // 波克夏股東權益（百萬美元）
-  totalEquity: 717419,
-  // A股等值總股數
-  totalAShares: 1438223,
-  // BRK.B 當前市場價格（美元）— 請視需要更新
-  currentPrice: 470,
-  // 資料說明
-  lastUpdated: "2025Q4（2026/03）",
+  totalEquity: 727181,
+  totalAShares: 1437903,
+  currentPrice: 498,
+  lastUpdated: "____Q?",
   sourceUrl: "https://www.berkshirehathaway.com/",
+};
 };
 // ============================================================
 
