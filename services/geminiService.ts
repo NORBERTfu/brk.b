@@ -2,13 +2,13 @@ import { BrkFinancialData, BacktestResult, PbrDistribution } from "../types";
 
 
 // ============================================================
-// 📌 每季手動更新此區塊 — 最後更新：2026Q1
+// 📌 每季手動更新此區塊 — 最後更新：2026Q2
 // ============================================================
 const MANUAL_DATA = {
-  totalEquity: 727181,
-  totalAShares: 1437903,
-  currentPrice: 488,
-  lastUpdated: "2026Q1",
+  totalEquity: 747910,
+  totalAShares: 1427140,
+  currentPrice: 521,
+  lastUpdated: "2026Q2",
   sourceUrl: "https://www.berkshirehathaway.com/",
 };
 
